@@ -1,0 +1,32 @@
+{
+    "manifest_version": 3,
+    "name": "QQ相册下载",
+    "version": "1.0",
+    "description": "",
+    "action": {
+        "default_popup": "src/popup.html",
+        "default_icon": {
+            "16": "src/assets/icon.png",
+            "48": "src/assets/icon.png",
+            "128": "src/assets/icon.png"
+        }
+    },
+    "icons": {
+        "16": "src/assets/icon.png",
+        "48": "src/assets/icon.png",
+        "128": "src/assets/icon.png"
+    },
+    "permissions": [
+        "downloads",
+        "webRequest",
+        "webRequestBlocking",
+        "storage",
+        "https://*.qzone.qq.com/*"
+    ],
+    "host_permissions": [
+        "https://*.qzone.qq.com/*"
+    ],
+    "background": {
+        "service_worker": "src/background.js"
+    }
+}
