@@ -39,10 +39,15 @@ async function downloadAlbumData(albumUrl) {
     return;
   }
 
+  // 获取用户设置的最大下载数量
+  const maxCountInput = document.getElementById('maxCount');
+  const maxCount = maxCountInput.value ? parseInt(maxCountInput.value, 10) : null;
+
   const downloadBox = document.getElementById('downloadBox');
   downloadBox.style.display = 'block'; // 显示下载盒子
 
-  const photoList = await getAlbumPhotoList(albumUrl);
+  const photoList = await getAlbumPhotoList(albumUrl, maxCount);
+
   const resultArray = photoList.map((photo) => ({
     name: photo.name,
     url: photo.url,
@@ -54,9 +59,10 @@ async function downloadAlbumData(albumUrl) {
 /**
  * 获取相册全部数据
  * @param {*} url
+ * @param {number|null} maxCount 最大下载数量，null 表示不限制
  * @returns
  */
-async function getAlbumPhotoList(url) {
+async function getAlbumPhotoList(url, maxCount = null) {
   // 解析 URL
   url = buildFetchUrl(url);
 
@@ -64,20 +70,31 @@ async function getAlbumPhotoList(url) {
   const photoData = await fetchPhotoList(url);
   const totalInAlbum = photoData.totalInAlbum;
   logMessage('相册照片总数：', totalInAlbum);
+
+  // 确定实际需要获取的数量
+  const actualCount = maxCount !== null ? Math.min(totalInAlbum, maxCount) : totalInAlbum;
+  logMessage('计划下载数量：', actualCount);
+
   let photoList = photoData.photoList || [];
 
-  // 如果总数超过 500，分页进行获取
-  if (totalInAlbum > 500) {
-    for (let pageStart = 500; pageStart < totalInAlbum; pageStart += 500) {
-      const nextPageUrl = buildFetchUrl(url, pageStart);
-      const photoData = await fetchPhotoList(nextPageUrl);
-      const nextPagePhotos = photoData.photoList;
-      photoList = photoList.concat(nextPagePhotos);
+  // 如果已获取数量不足，继续分页获取
+  while (photoList.length < actualCount) {
+    const pageStart = photoList.length;
+    const nextPageUrl = buildFetchUrl(url, pageStart);
+    const photoData = await fetchPhotoList(nextPageUrl);
+    const nextPagePhotos = photoData.photoList;
+    photoList = photoList.concat(nextPagePhotos);
+
+    // 如果返回的照片数量少于请求的数量，说明已经没有更多照片了
+    if (nextPagePhotos.length < 500) {
+      break;
     }
   }
 
-  logMessage('即将下载的数据列表：', photoList);
-  return photoList;
+  // 截取到实际需要的数量
+  const finalPhotoList = photoList.slice(0, actualCount);
+  logMessage('即将下载的数据列表：', finalPhotoList);
+  return finalPhotoList;
 }
 
 /**
