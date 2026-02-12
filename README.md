@@ -1,49 +1,78 @@
-<!--
- * @Author: wz && vgqk@qq.com
- * @Date: 2024-12-15 14:42:37
- *
- * Copyright (c) 2024 by wz, All Rights Reserved.
--->
+# QQ 空间相册下载 Chrome 插件
 
-## QQ 空间相册下载 chrome 插件
+批量下载 QQ 空间相册照片的浏览器扩展，支持自定义下载数量限制。
 
-![图片描述](image/img.png)
+![界面截图](image/img.png)
 
-## 如何使用
-1、打开chrome ——> 进入`chrome://extensions/` ——> 加载已解压的扩展程序 ——> 选择这个项目<br />
-2、登录 QQ 空间 ——> 进入我的相册 ——> 进入具体相册 ——> 点击插件的下载相册按钮<br />即可下载当前相册中的所有照片。
-<br />
+## 功能特点
 
-旅游相册和普通相册的接口不同，我只实现了对普通相册的处理。
+- 批量下载 QQ 空间普通相册的全部照片
+- 支持设置最大下载数量（默认 500 张）
+- 自动打包为 ZIP 文件下载
+- 实时显示下载进度
 
-## 核心流程
+## 使用方法
 
-1. 请求拦截：
-   首先拦截特定的请求 URL： `*://h5.qzone.qq.com/proxy/domain/photo.qzone.qq.com/fcgi-bin/cgi_list_photo*`，通过拦截请求 URL，插件能够获取必要的参数，用于构建后续的自定义请求，同时可以忽略一些意义不明确的字段。
-2. 自定义请求参数：
-   在获取到请求参数后，插件会自定义请求参数，设置 pageNum=500，这是因为该接口的最大分页限制为 500 条数据。
-   如果相册中的图片数量超过 500 条，插件会使用 pageStart 参数进行轮询请求，直到获取到所有的图片数据。
-3. 生成图片数组并打包下载图片：
-   一旦获取到所有的图片数据，插件会生成一个数组，格式为 [{name: xxx, url: xxx}]，这里的 name 是图片的名称，url 是图片的下载链接。
-   这个数组将用于后续的下载操作，接下来就是打包下载所有图片。
+### 安装插件
 
-## 代码结构
+1. 打开 Chrome 浏览器，访问 `chrome://extensions/`
+2. 开启右上角的「开发者模式」
+3. 点击「加载已解压的扩展程序」
+4. 选择本项目目录
+
+### 下载相册
+
+1. 登录 [QQ 空间](https://qzone.qq.com/)
+2. 进入「我的相册」→ 选择具体相册
+3. 点击插件图标，设置最大下载数量（留空表示全部）
+4. 点击「下载相册」按钮
+
+> **注意**：旅游相册接口不同，暂不支持。
+
+## 工作原理
+
+### 数据流向
+
+```
+QQ 相册页面 → background.js (拦截请求) → chrome.storage
+                                            ↓
+popup.html (用户点击下载) ← chrome.storage
+              ↓
+       popup.js (分页获取照片列表)
+              ↓
+       photoDownloader.js (Web Worker 下载)
+              ↓
+           JSZip 打包 → 浏览器下载
+```
+
+### 核心流程
+
+1. **请求拦截**：拦截 QQ 相册 API 请求 `*://h5.qzone.qq.com/proxy/domain/photo.qzone.qq.com/fcgi-bin/cgi_list_photo*`，获取请求参数
+
+2. **分页获取**：该接口单次最多返回 500 张照片，插件通过 `pageStart` 参数循环获取全部数据
+
+3. **打包下载**：使用 Web Worker 在后台下载图片，通过 JSZip 打包成 ZIP 文件
+
+## 项目结构
 
 ```
 └── src
     ├── assets
-    │   └── icon.png
-    ├── background.js #拦截特定请求
-    ├── jszip.min.js #下载zip用到的sdk
-    ├── photoDownloader.js #Web Worker 下载
-    ├── popup.html
-    ├── popup.js #交互及自定义相册接口数据的请求
-    └── styles.css
+    │   └── icon.png           # 扩展图标
+    ├── background.js          # 后台脚本，拦截请求
+    ├── jszip.min.js           # JSZip 库
+    ├── photoDownloader.js     # Web Worker，下载图片
+    ├── popup.html             # 弹窗界面
+    ├── popup.js               # 主逻辑
+    └── styles.css             # 样式文件
 ```
 
-## 提示
-如果相册照片非常多，或者网络状况不好可能会出现无响应情况，可以右键插件空白处打开控制台查看日志及网络信息。
+## 故障排查
 
+如果遇到问题：
+- 右键插件图标 → 检查弹出窗口
+- 右键插件图标空白处 → 检查后台控制台
+- 查看网络请求是否正常
 
 ---
 
